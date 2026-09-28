@@ -2,15 +2,18 @@ import mongoose from 'mongoose';
 
 export const OUTCOMES = [
   'no_answer',
-  'whatsapp',
+  'no_whatsapp',
   'owner_absent',
   'call_later',
   'tell_tomorrow',
   'already_arranged',
+  'has_website',
   'not_interested',
   'agreed',
   'done',
 ];
+
+export const DEAD_OUTCOMES = ['no_whatsapp', 'has_website'];
 
 const leadSchema = new mongoose.Schema(
   {
