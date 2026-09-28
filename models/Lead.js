@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 export const OUTCOMES = [
   'no_answer',
   'no_whatsapp',
+  'number_deleted',
   'owner_absent',
   'call_later',
   'tell_tomorrow',
@@ -13,7 +14,7 @@ export const OUTCOMES = [
   'done',
 ];
 
-export const DEAD_OUTCOMES = ['no_whatsapp', 'has_website'];
+export const DEAD_OUTCOMES = ['no_whatsapp', 'number_deleted', 'has_website'];
 
 const leadSchema = new mongoose.Schema(
   {
