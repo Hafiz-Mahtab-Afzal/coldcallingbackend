@@ -99,12 +99,18 @@ const dayStartFrom = (since) =>
 
 export const getToday = async (req, res) => {
   try {
-    const { since } = req.query;
-    const todayDone = await Lead.countDocuments({
-      hasWebsite: false,
-      lastActionAt: { $gte: dayStartFrom(since) },
-    });
-    res.json({ success: true, todayDone, dailyTarget: DAILY_TARGET });
+    const { since, city, country } = req.query;
+    const scope = { hasWebsite: false };
+    if (city) scope.city = city;
+    if (country) scope.country = country;
+
+    const [todayDone, totalDone, totalCallable] = await Promise.all([
+      Lead.countDocuments({ ...scope, lastActionAt: { $gte: dayStartFrom(since) } }),
+      Lead.countDocuments({ ...scope, 'outcomes.0': { $exists: true } }),
+      Lead.countDocuments(scope),
+    ]);
+
+    res.json({ success: true, todayDone, totalDone, totalCallable, dailyTarget: DAILY_TARGET });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
