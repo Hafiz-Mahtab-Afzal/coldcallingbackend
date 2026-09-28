@@ -9,12 +9,13 @@ export const OUTCOMES = [
   'tell_tomorrow',
   'already_arranged',
   'has_website',
+  'reason_pakistan',
   'not_interested',
   'agreed',
   'done',
 ];
 
-export const DEAD_OUTCOMES = ['no_whatsapp', 'number_deleted', 'has_website'];
+export const DEAD_OUTCOMES = ['no_whatsapp', 'number_deleted', 'has_website', 'reason_pakistan'];
 
 const leadSchema = new mongoose.Schema(
   {
@@ -29,6 +30,10 @@ const leadSchema = new mongoose.Schema(
     country: { type: String, required: true, trim: true, index: true },
     city: { type: String, required: true, trim: true, index: true },
     placeId: { type: String, default: '', trim: true },
+    mapsUrl: { type: String, default: '', trim: true },
+    cid: { type: String, default: '', trim: true },
+    lat: { type: Number, default: null },
+    lng: { type: Number, default: null },
     dayIndex: { type: Number, default: 1, index: true },
     position: { type: Number, default: 0 },
     outcomes: { type: [{ type: String, enum: OUTCOMES }], default: [], index: true },

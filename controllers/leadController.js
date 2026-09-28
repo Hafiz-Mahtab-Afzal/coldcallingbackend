@@ -256,6 +256,10 @@ export const importLeads = async (req, res) => {
         country,
         city,
         placeId: (row.placeId || '').trim(),
+        mapsUrl: (row.mapsUrl || '').trim(),
+        cid: (row.cid || '').trim(),
+        lat: Number(row.lat) || null,
+        lng: Number(row.lng) || null,
         position: idx,
         dayIndex: hasWebsite ? 0 : Math.floor(callable++ / DAILY_TARGET) + 1,
       };

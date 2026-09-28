@@ -89,6 +89,10 @@ const run = async () => {
       reviewCount: Number(r.review_count || r.reviewCount || 0) || 0,
       rating: Number(r.review_rating || r.rating || 0) || 0,
       placeId: r.place_id || r.placeId || '',
+      mapsUrl: r.link || r.mapsUrl || '',
+      cid: r.cid || '',
+      lat: Number(r.latitude) || null,
+      lng: Number(r.longitude) || null,
     }))
     .filter((r) => r.name);
 
