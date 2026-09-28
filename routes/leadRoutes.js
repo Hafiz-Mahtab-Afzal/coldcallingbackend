@@ -3,6 +3,7 @@ import {
   getLeads,
   getFilters,
   getDays,
+  getToday,
   getStats,
   updateLead,
   importLeads,
@@ -12,6 +13,7 @@ const router = Router();
 
 router.get('/filters', getFilters);
 router.get('/days', getDays);
+router.get('/today', getToday);
 router.get('/stats', getStats);
 router.get('/', getLeads);
 router.post('/import', importLeads);

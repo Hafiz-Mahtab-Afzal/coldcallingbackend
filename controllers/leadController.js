@@ -94,12 +94,28 @@ export const getFilters = async (req, res) => {
   }
 };
 
+const dayStartFrom = (since) =>
+  since && !Number.isNaN(Date.parse(since)) ? new Date(since) : new Date(new Date().setHours(0, 0, 0, 0));
+
+export const getToday = async (req, res) => {
+  try {
+    const { since } = req.query;
+    const todayDone = await Lead.countDocuments({
+      hasWebsite: false,
+      lastActionAt: { $gte: dayStartFrom(since) },
+    });
+    res.json({ success: true, todayDone, dailyTarget: DAILY_TARGET });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 export const getDays = async (req, res) => {
   try {
     const { city, since } = req.query;
     if (!city) return res.status(400).json({ success: false, message: 'city is required' });
 
-    const dayStart = since && !Number.isNaN(Date.parse(since)) ? new Date(since) : new Date(new Date().setHours(0, 0, 0, 0));
+    const dayStart = dayStartFrom(since);
 
     const [days, touchedToday] = await Promise.all([
       Lead.aggregate([
