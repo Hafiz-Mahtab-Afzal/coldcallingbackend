@@ -96,23 +96,28 @@ export const getFilters = async (req, res) => {
 
 export const getDays = async (req, res) => {
   try {
-    const { city } = req.query;
+    const { city, since } = req.query;
     if (!city) return res.status(400).json({ success: false, message: 'city is required' });
 
-    const days = await Lead.aggregate([
-      { $match: { city, hasWebsite: false } },
-      {
-        $group: {
-          _id: '$dayIndex',
-          total: { $sum: 1 },
-          actioned: { $sum: { $cond: [{ $gt: [{ $size: { $ifNull: ['$outcomes', []] } }, 0] }, 1, 0] } },
+    const dayStart = since && !Number.isNaN(Date.parse(since)) ? new Date(since) : new Date(new Date().setHours(0, 0, 0, 0));
+
+    const [days, touchedToday] = await Promise.all([
+      Lead.aggregate([
+        { $match: { city, hasWebsite: false } },
+        {
+          $group: {
+            _id: '$dayIndex',
+            total: { $sum: 1 },
+            actioned: { $sum: { $cond: [{ $gt: [{ $size: { $ifNull: ['$outcomes', []] } }, 0] }, 1, 0] } },
+          },
         },
-      },
-      { $sort: { _id: 1 } },
-      { $project: { _id: 0, day: '$_id', total: 1, actioned: 1 } },
+        { $sort: { _id: 1 } },
+        { $project: { _id: 0, day: '$_id', total: 1, actioned: 1 } },
+      ]),
+      Lead.countDocuments({ city, hasWebsite: false, lastActionAt: { $gte: dayStart } }),
     ]);
 
-    res.json({ success: true, days, dailyTarget: DAILY_TARGET });
+    res.json({ success: true, days, todayDone: touchedToday, dailyTarget: DAILY_TARGET });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
