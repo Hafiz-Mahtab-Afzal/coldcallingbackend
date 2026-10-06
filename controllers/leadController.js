@@ -9,7 +9,7 @@ const buildQuery = ({ country, city, category, outcome, day, website, search }, 
   const query = {};
   if (country) query.country = country;
   if (city) query.city = city;
-  if (category) query.category = category;
+  if (category) query.category = allowed && !allowed.includes(category) ? { $in: [] } : category;
   else if (allowed) query.category = { $in: allowed };
   if (outcome === 'none') query.$expr = { $eq: [{ $size: { $ifNull: ['$outcomes', []] } }, 0] };
   else if (outcome && OUTCOMES.includes(outcome)) query.outcomes = outcome;
@@ -71,9 +71,11 @@ export const getLeads = async (req, res) => {
 export const getFilters = async (req, res) => {
   try {
     const { country, city } = req.query;
+    const allowed = await enabledTypes();
     const scope = {};
     if (country) scope.country = country;
     if (city) scope.city = city;
+    const catFilter = allowed ? { $in: allowed } : { $nin: ['', null] };
 
     const [grouped, categories] = await Promise.all([
       Lead.aggregate([
@@ -81,7 +83,7 @@ export const getFilters = async (req, res) => {
         { $sort: { '_id.country': 1, '_id.city': 1 } },
       ]),
       Lead.aggregate([
-        { $match: { ...scope, category: { $nin: ['', null] } } },
+        { $match: { ...scope, category: catFilter } },
         { $group: { _id: '$category', total: { $sum: 1 }, sellable: { $sum: { $cond: ['$hasWebsite', 0, 1] } } } },
         { $sort: { total: -1, _id: 1 } },
         { $project: { _id: 0, category: '$_id', total: 1, sellable: 1 } },
