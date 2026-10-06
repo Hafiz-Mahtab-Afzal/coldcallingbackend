@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import connectDb from '../config/db.js';
 import Lead, { OUTCOMES } from '../models/Lead.js';
 
-const DAILY_TARGET = Number(process.env.DAILY_TARGET || 50);
+const DAILY_TARGET = Number(process.env.DAILY_TARGET || 20);
 
 const parseArgs = () => {
   const args = {};

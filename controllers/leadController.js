@@ -1,7 +1,7 @@
 import Lead, { OUTCOMES } from '../models/Lead.js';
 import { enabledTypes } from './typeController.js';
 
-const DAILY_TARGET = Number(process.env.DAILY_TARGET || 50);
+const DAILY_TARGET = Number(process.env.DAILY_TARGET || 20);
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -30,13 +30,28 @@ export const getLeads = async (req, res) => {
     const allowed = await enabledTypes();
     const query = buildQuery(req.query, allowed);
     const scope = buildQuery({ ...req.query, outcome: undefined }, allowed);
+    const dayStart = dayStartFrom(req.query.since);
 
     const [rows, total, tally, scopeTotal] = await Promise.all([
-      Lead.find(query)
-        .sort({ hasWebsite: 1, dayIndex: 1, position: 1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
+      Lead.aggregate([
+        { $match: query },
+        {
+          $addFields: {
+            rank: {
+              $switch: {
+                branches: [
+                  { case: { $gte: ['$lastActionAt', dayStart] }, then: 0 },
+                  { case: { $eq: [{ $size: { $ifNull: ['$outcomes', []] } }, 0] }, then: 1 },
+                ],
+                default: 2,
+              },
+            },
+          },
+        },
+        { $sort: { hasWebsite: 1, rank: 1, dayIndex: 1, position: 1 } },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+      ]),
       Lead.countDocuments(query),
       Lead.aggregate([
         { $match: scope },
