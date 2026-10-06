@@ -38,6 +38,13 @@ const leadSchema = new mongoose.Schema(
     position: { type: Number, default: 0 },
     outcomes: { type: [{ type: String, enum: OUTCOMES }], default: [], index: true },
     callCount: { type: Number, default: 0 },
+    neighbour: {
+      name: { type: String, default: '' },
+      website: { type: String, default: '' },
+      mapsUrl: { type: String, default: '' },
+      category: { type: String, default: '' },
+      distanceM: { type: Number, default: null },
+    },
     note: { type: String, default: '', trim: true },
     lastActionAt: { type: Date, default: null },
   },
