@@ -1,14 +1,16 @@
 import Lead, { OUTCOMES } from '../models/Lead.js';
+import { enabledTypes } from './typeController.js';
 
 const DAILY_TARGET = Number(process.env.DAILY_TARGET || 50);
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const buildQuery = ({ country, city, category, outcome, day, website, search }) => {
+const buildQuery = ({ country, city, category, outcome, day, website, search }, allowed = null) => {
   const query = {};
   if (country) query.country = country;
   if (city) query.city = city;
   if (category) query.category = category;
+  else if (allowed) query.category = { $in: allowed };
   if (outcome === 'none') query.$expr = { $eq: [{ $size: { $ifNull: ['$outcomes', []] } }, 0] };
   else if (outcome && OUTCOMES.includes(outcome)) query.outcomes = outcome;
   if (day) query.dayIndex = Number(day);
@@ -25,8 +27,9 @@ export const getLeads = async (req, res) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
-    const query = buildQuery(req.query);
-    const scope = buildQuery({ ...req.query, outcome: undefined });
+    const allowed = await enabledTypes();
+    const query = buildQuery(req.query, allowed);
+    const scope = buildQuery({ ...req.query, outcome: undefined }, allowed);
 
     const [rows, total, tally, scopeTotal] = await Promise.all([
       Lead.find(query)

@@ -8,9 +8,12 @@ import {
   updateLead,
   importLeads,
 } from '../controllers/leadController.js';
+import { getTypes, setTypes } from '../controllers/typeController.js';
 
 const router = Router();
 
+router.get('/types', getTypes);
+router.put('/types', setTypes);
 router.get('/filters', getFilters);
 router.get('/days', getDays);
 router.get('/today', getToday);
