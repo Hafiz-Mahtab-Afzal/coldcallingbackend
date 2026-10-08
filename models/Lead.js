@@ -7,6 +7,8 @@ export const OUTCOMES = [
   'owner_absent',
   'call_later',
   'tell_tomorrow',
+  'partner_ask',
+  'already_called',
   'already_arranged',
   'has_website',
   'reason_pakistan',
@@ -15,7 +17,16 @@ export const OUTCOMES = [
   'done',
 ];
 
-export const DEAD_OUTCOMES = ['no_whatsapp', 'number_deleted', 'has_website', 'reason_pakistan'];
+export const DEAD_OUTCOMES = [
+  'no_whatsapp',
+  'number_deleted',
+  'has_website',
+  'reason_pakistan',
+  'already_called',
+  'not_interested',
+  'agreed',
+  'done',
+];
 
 const leadSchema = new mongoose.Schema(
   {
