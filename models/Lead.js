@@ -7,6 +7,7 @@ export const OUTCOMES = [
   'owner_absent',
   'call_later',
   'tell_tomorrow',
+  'will_think',
   'partner_ask',
   'already_called',
   'already_arranged',
