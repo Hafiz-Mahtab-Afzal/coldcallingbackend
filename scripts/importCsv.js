@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import mongoose from 'mongoose';
 import connectDb from '../config/db.js';
 import Lead, { OUTCOMES } from '../models/Lead.js';
+import { norm, townFromAddress } from '../lib/municipality.js';
 
 const DAILY_TARGET = Number(process.env.DAILY_TARGET || 20);
 
@@ -106,8 +107,23 @@ const run = async () => {
 
   unique.sort((a, b) => b.reviewCount - a.reviewCount);
 
+  const belongs = [];
+  const elsewhereTown = [];
+  const unplaced = [];
+  unique.forEach((r) => {
+    const town = townFromAddress(r.address);
+    if (town === null) unplaced.push(r);
+    else if (norm(town) === norm(city)) belongs.push(r);
+    else elsewhereTown.push(r);
+  });
+
+  const ids = belongs.map((r) => r.placeId).filter(Boolean);
+  const seenIds = await Lead.find({ placeId: { $in: ids } }, { placeId: 1, city: 1 }).lean();
+  const claimed = new Set(seenIds.filter((r) => r.city !== city).map((r) => r.placeId));
+  const fresh = belongs.filter((r) => !r.placeId || !claimed.has(r.placeId));
+
   let callable = 0;
-  const ops = unique.map((row, idx) => {
+  const ops = fresh.map((row, idx) => {
     const hasWebsite = Boolean(row.website);
     const doc = {
       ...row,
@@ -137,11 +153,14 @@ const run = async () => {
     { $set: { outcomes: [], callCount: 0 } }
   );
   const pruned = await Lead.updateMany({ city }, { $pull: { outcomes: { $nin: OUTCOMES } } });
-  const withoutSite = unique.filter((r) => !r.website).length;
+  const withoutSite = fresh.filter((r) => !r.website).length;
 
   console.log(`City         : ${city}, ${country}`);
   console.log(`Parsed       : ${records.length}`);
   console.log(`Unique       : ${unique.length}`);
+  console.log(`Another town : ${elsewhereTown.length} (skipped, they are not in ${city})`);
+  console.log(`No postcode  : ${unplaced.length} (skipped, town could not be confirmed)`);
+  console.log(`Already filed elsewhere: ${belongs.length - fresh.length}`);
   console.log(`No website   : ${withoutSite}`);
   console.log(`Inserted     : ${result.upsertedCount}`);
   console.log(`Updated      : ${result.modifiedCount}`);
