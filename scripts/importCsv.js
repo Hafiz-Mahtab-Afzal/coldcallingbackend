@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import connectDb from '../config/db.js';
 import Lead, { OUTCOMES } from '../models/Lead.js';
 import { norm, townFromAddress } from '../lib/municipality.js';
+import { municipalityAt, saveCache } from '../lib/geocode.js';
 import { markTried } from '../lib/triedMyself.js';
 
 const DAILY_TARGET = Number(process.env.DAILY_TARGET || 20);
@@ -111,12 +112,23 @@ const run = async () => {
   const belongs = [];
   const elsewhereTown = [];
   const unplaced = [];
-  unique.forEach((r) => {
-    const town = townFromAddress(r.address);
+  let geocoded = 0;
+  for (const r of unique) {
+    let town = townFromAddress(r.address);
+    // the parish map only knows the towns somebody typed into it, so ask the
+    // map itself rather than dropping a row whose locality is not listed
+    if (town === null && r.lat && r.lng) {
+      const found = await municipalityAt(r.lat, r.lng);
+      if (found) {
+        town = found;
+        geocoded += 1;
+      }
+    }
     if (town === null) unplaced.push(r);
     else if (norm(town) === norm(city)) belongs.push(r);
     else elsewhereTown.push(r);
-  });
+  }
+  saveCache();
 
   const ids = belongs.map((r) => r.placeId).filter(Boolean);
   const seenIds = await Lead.find({ placeId: { $in: ids } }, { placeId: 1, city: 1 }).lean();
@@ -162,6 +174,7 @@ const run = async () => {
   console.log(`Unique       : ${unique.length}`);
   console.log(`Another town : ${elsewhereTown.length} (skipped, they are not in ${city})`);
   console.log(`No postcode  : ${unplaced.length} (skipped, town could not be confirmed)`);
+  console.log(`Placed by map: ${geocoded} (locality was not in the parish list)`);
   console.log(`Already filed elsewhere: ${belongs.length - fresh.length}`);
   console.log(`No website   : ${withoutSite}`);
   console.log(`Inserted     : ${result.upsertedCount}`);
