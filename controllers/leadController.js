@@ -94,8 +94,15 @@ export const getFilters = async (req, res) => {
 
     const [grouped, categories] = await Promise.all([
       Lead.aggregate([
-        { $group: { _id: { country: '$country', city: '$city' }, total: { $sum: 1 } } },
-        { $sort: { '_id.country': 1, '_id.city': 1 } },
+        {
+          $group: {
+            _id: { country: '$country', city: '$city' },
+            total: { $sum: 1 },
+            added: { $max: '$createdAt' },
+          },
+        },
+        // newest city first, so a city that was just scraped is at the top of the picker
+        { $sort: { added: -1 } },
       ]),
       Lead.aggregate([
         { $match: { ...scope, category: catFilter } },
@@ -105,7 +112,7 @@ export const getFilters = async (req, res) => {
       ]),
     ]);
 
-    const countries = [...new Set(grouped.map((g) => g._id.country))];
+    const countries = [...new Set(grouped.map((g) => g._id.country))].sort();
     const cities = grouped.map((g) => ({ country: g._id.country, city: g._id.city, total: g.total }));
 
     res.json({ success: true, countries, cities, categories, outcomes: OUTCOMES, dailyTarget: DAILY_TARGET });
