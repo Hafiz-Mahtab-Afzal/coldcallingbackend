@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import connectDb from '../config/db.js';
 import Lead, { OUTCOMES } from '../models/Lead.js';
 import { norm, townFromAddress } from '../lib/municipality.js';
+import { markTried } from '../lib/triedMyself.js';
 
 const DAILY_TARGET = Number(process.env.DAILY_TARGET || 20);
 
@@ -153,6 +154,7 @@ const run = async () => {
     { $set: { outcomes: [], callCount: 0 } }
   );
   const pruned = await Lead.updateMany({ city }, { $pull: { outcomes: { $nin: OUTCOMES } } });
+  const tried = await markTried(city);
   const withoutSite = fresh.filter((r) => !r.website).length;
 
   console.log(`City         : ${city}, ${country}`);
@@ -166,6 +168,7 @@ const run = async () => {
   console.log(`Updated      : ${result.modifiedCount}`);
   console.log(`Backfilled   : ${backfilled.modifiedCount}`);
   console.log(`Pruned       : ${pruned.modifiedCount} (retired outcomes removed)`);
+  console.log(`Tried by hand: ${tried.length} (marked, they leave the type filter)`);
   console.log(`Call days    : ${Math.ceil(withoutSite / DAILY_TARGET)} (${DAILY_TARGET} calls per day)`);
 
   await mongoose.disconnect();

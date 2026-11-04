@@ -11,7 +11,8 @@
     "dev": "node --watch index.js",
     "start": "node index.js",
     "import": "node scripts/importCsv.js",
-    "neighbours": "node scripts/findNeighbours.js"
+    "neighbours": "node scripts/findNeighbours.js",
+    "tried": "node scripts/markTried.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
