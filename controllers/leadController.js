@@ -1,4 +1,4 @@
-import Lead, { OUTCOMES } from '../models/Lead.js';
+import Lead, { OUTCOMES, DEAD_OUTCOMES } from '../models/Lead.js';
 import { enabledTypes } from './typeController.js';
 
 const DAILY_TARGET = Number(process.env.DAILY_TARGET || 20);
@@ -106,7 +106,32 @@ export const getFilters = async (req, res) => {
       ]),
       Lead.aggregate([
         { $match: { ...scope, category: catFilter } },
-        { $group: { _id: '$category', total: { $sum: 1 }, sellable: { $sum: { $cond: ['$hasWebsite', 0, 1] } } } },
+        {
+          $group: {
+            _id: '$category',
+            total: { $sum: 1 },
+            // what is still worth a call: no website yet, and not already closed out
+            sellable: {
+              $sum: {
+                $cond: [
+                  {
+                    $or: [
+                      '$hasWebsite',
+                      {
+                        $gt: [
+                          { $size: { $setIntersection: [{ $ifNull: ['$outcomes', []] }, DEAD_OUTCOMES] } },
+                          0,
+                        ],
+                      },
+                    ],
+                  },
+                  0,
+                  1,
+                ],
+              },
+            },
+          },
+        },
         { $sort: { total: -1, _id: 1 } },
         { $project: { _id: 0, category: '$_id', total: 1, sellable: 1 } },
       ]),
