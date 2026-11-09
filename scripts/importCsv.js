@@ -113,7 +113,14 @@ const run = async () => {
   const elsewhereTown = [];
   const unplaced = [];
   let geocoded = 0;
+  // the parish map and the postcode format are Portugal only, so outside it the
+  // whole scrape is one city and every row belongs
+  const checkTown = norm(country) === 'portugal';
   for (const r of unique) {
+    if (!checkTown) {
+      belongs.push(r);
+      continue;
+    }
     let town = townFromAddress(r.address);
     // the parish map only knows the towns somebody typed into it, so ask the
     // map itself rather than dropping a row whose locality is not listed
