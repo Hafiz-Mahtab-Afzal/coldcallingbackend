@@ -1,14 +1,25 @@
 import Lead, { OUTCOMES, DEAD_OUTCOMES } from '../models/Lead.js';
+import { districtOf, townsInDistrict } from '../lib/municipality.js';
 import { enabledTypes } from './typeController.js';
 
 const DAILY_TARGET = Number(process.env.DAILY_TARGET || 20);
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const buildQuery = ({ country, city, category, outcome, day, website, search }, allowed = null) => {
+// a lead only knows its city, so a district becomes the list of towns in it
+const citiesIn = (district) => {
+  const towns = townsInDistrict(district);
+  return towns ? { $in: towns } : undefined;
+};
+
+const buildQuery = ({ country, city, district, category, outcome, day, website, search }, allowed = null) => {
   const query = {};
   if (country) query.country = country;
   if (city) query.city = city;
+  else if (district) {
+    const towns = citiesIn(district);
+    if (towns) query.city = towns;
+  }
   if (category) query.category = allowed && !allowed.includes(category) ? { $in: [] } : category;
   else if (allowed) query.category = { $in: allowed };
   if (outcome === 'none') query.$expr = { $eq: [{ $size: { $ifNull: ['$outcomes', []] } }, 0] };
@@ -85,11 +96,15 @@ export const getLeads = async (req, res) => {
 
 export const getFilters = async (req, res) => {
   try {
-    const { country, city } = req.query;
+    const { country, city, district } = req.query;
     const allowed = await enabledTypes();
     const scope = {};
     if (country) scope.country = country;
     if (city) scope.city = city;
+    else if (district) {
+      const towns = citiesIn(district);
+      if (towns) scope.city = towns;
+    }
     const catFilter = allowed ? { $in: allowed } : { $nin: ['', null] };
 
     const [grouped, categories] = await Promise.all([
@@ -138,7 +153,12 @@ export const getFilters = async (req, res) => {
     ]);
 
     const countries = [...new Set(grouped.map((g) => g._id.country))].sort();
-    const cities = grouped.map((g) => ({ country: g._id.country, city: g._id.city, total: g.total }));
+    const cities = grouped.map((g) => ({
+      country: g._id.country,
+      city: g._id.city,
+      total: g.total,
+      district: districtOf(g._id.city),
+    }));
 
     res.json({ success: true, countries, cities, categories, outcomes: OUTCOMES, dailyTarget: DAILY_TARGET });
   } catch (err) {
@@ -151,9 +171,13 @@ const dayStartFrom = (since) =>
 
 export const getToday = async (req, res) => {
   try {
-    const { since, city, country } = req.query;
+    const { since, city, country, district } = req.query;
     const scope = { hasWebsite: false };
     if (city) scope.city = city;
+    else if (district) {
+      const towns = citiesIn(district);
+      if (towns) scope.city = towns;
+    }
     if (country) scope.country = country;
 
     const [todayDone, totalDone, totalCallable] = await Promise.all([
@@ -238,9 +262,13 @@ export const updateLead = async (req, res) => {
 
 export const getStats = async (req, res) => {
   try {
-    const { city, country, month } = req.query;
+    const { city, country, month, district } = req.query;
     const match = { hasWebsite: false };
     if (city) match.city = city;
+    else if (district) {
+      const towns = citiesIn(district);
+      if (towns) match.city = towns;
+    }
     if (country) match.country = country;
 
     if (month) {
